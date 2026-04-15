@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bollywood Quiz Arena</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --gold:#FFD700;--gold2:#FFA500;--dark:#07070E;--dark2:#0F0F1A;
+  --dark3:#161622;--card:#1C1C2E;--card2:#222234;--card3:#2A2A40;
+  --text:#F2EEFF;--muted:#7A789A;--green:#2ECC71;
+  --ts:#2ECC71;--tw:#F39C12;--td:#E74C3C;
+  --ea:#FF6B9D;--da:#845EF7;--ma:#FFD700;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'Poppins',sans-serif;background:var(--dark);color:var(--text);display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 15% 15%,rgba(132,94,247,.07) 0%,transparent 70%),radial-gradient(ellipse 50% 50% at 85% 85%,rgba(255,107,157,.05) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+.screen{display:none;position:fixed;inset:0;z-index:1;overflow-y:auto;overflow-x:hidden}
+.screen.active{display:flex;flex-direction:column}
+
+/* ─── WELCOME ─── */
+#screen-welcome{align-items:center;justify-content:center;padding:clamp(1rem,3vw,2.5rem)}
+.wi{width:100%;max-width:960px;display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.5rem,3vw,3rem);align-items:center}
+@media(max-width:680px){.wi{grid-template-columns:1fr;max-width:420px}.wl{text-align:center}}
+.logo{font-family:'Bebas Neue',cursive;font-size:clamp(52px,8vw,100px);background:linear-gradient(135deg,var(--gold) 0%,var(--gold2) 50%,#FF6B9D 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:3px;line-height:.9}
+.logo-sub{font-size:clamp(10px,1.2vw,13px);letter-spacing:5px;text-transform:uppercase;color:var(--muted);margin-top:10px}
+.ob{display:inline-flex;align-items:center;gap:8px;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.25);border-radius:99px;padding:6px 16px;font-size:13px;color:var(--green);margin-top:16px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pls 1.8s infinite}
+@keyframes pls{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.rp{display:flex;flex-direction:column;gap:14px}
+.pc{background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:clamp(.9rem,2vw,1.4rem)}
+.pl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.ni{width:100%;background:var(--dark3);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:13px 16px;font-size:16px;color:var(--text);font-family:'Poppins',sans-serif;outline:none;transition:border .2s}
+.ni:focus{border-color:var(--gold)}
+.ni::placeholder{color:var(--muted)}
+.gcs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
+.gc{border:1.5px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 8px;cursor:pointer;text-align:center;transition:all .2s;background:var(--dark3)}
+.gc:hover{transform:translateY(-3px)}
+.gc.sm{border-color:var(--ma);background:rgba(255,215,0,.06)}
+.gc.se{border-color:var(--ea);background:rgba(255,107,157,.06)}
+.gc.sd{border-color:var(--da);background:rgba(132,94,247,.06)}
+.gci{font-size:28px;margin-bottom:6px}
+.gcn{font-size:13px;font-weight:700}
+.gcs2{font-size:10px;color:var(--muted);margin-top:2px}
+.btn{width:100%;padding:clamp(12px,1.5vw,15px) 24px;border-radius:14px;font-size:clamp(14px,1.5vw,16px);font-weight:700;font-family:'Poppins',sans-serif;cursor:pointer;border:none;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btp{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#111}
+.btp:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btg{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--muted);width:100%;font-family:'Poppins',sans-serif}
+.btg:hover{border-color:var(--text);color:var(--text)}
+.btn:disabled{opacity:.4;pointer-events:none}
+
+/* ─── QUIZ ─── */
+#screen-quiz{display:none;flex-direction:column;overflow:hidden}
+#screen-quiz.active{display:flex}
+.qtop{flex-shrink:0;background:var(--dark2);border-bottom:1px solid rgba(255,255,255,.06);padding:clamp(8px,1.5vw,13px) clamp(1rem,3vw,2.5rem);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.qplayer{font-size:clamp(11px,1.2vw,14px);color:var(--muted)}
+.qplayer strong{color:var(--gold)}
+.qsw{text-align:center}
+.qsl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.qsv{font-family:'Bebas Neue',cursive;font-size:clamp(28px,4vw,44px);color:var(--gold);line-height:1}
+.qright{display:flex;justify-content:flex-end;align-items:center;gap:10px}
+.qtag{font-size:11px;padding:4px 12px;border-radius:99px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.tmovie{background:rgba(255,215,0,.12);color:var(--ma);border:1px solid rgba(255,215,0,.2)}
+.temoji{background:rgba(255,107,157,.12);color:var(--ea);border:1px solid rgba(255,107,157,.2)}
+.tdialogue{background:rgba(132,94,247,.12);color:var(--da);border:1px solid rgba(132,94,247,.2)}
+.qpw{flex-shrink:0;background:var(--dark2);padding:0 clamp(1rem,3vw,2.5rem)}
+.qpm{display:flex;justify-content:space-between;padding:8px 0 5px}
+.qpm span{font-size:12px;color:var(--muted)}
+.qpt{height:3px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+.qpf{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:99px;transition:width .5s}
+.qbody{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+@media(max-width:800px){.qbody{grid-template-columns:1fr;grid-template-rows:auto 1fr;overflow-y:auto}}
+.qleft{border-right:1px solid rgba(255,255,255,.05);padding:clamp(1rem,2.5vw,2rem);display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.qr{padding:clamp(1rem,2vw,1.8rem);display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.tw{margin-bottom:clamp(.8rem,1.5vw,1.2rem)}
+.tm{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.tl{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted)}
+.tn{font-family:'Bebas Neue',cursive;font-size:clamp(22px,3vw,32px)}
+.tn.safe{color:var(--ts)}.tn.warn{color:var(--tw)}.tn.danger{color:var(--td);animation:td .3s infinite alternate}
+@keyframes td{from{opacity:1}to{opacity:.5}}
+.tbt{height:5px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden}
+.tbf{height:100%;border-radius:99px;transition:width .95s linear,background .3s}
+.tbf.safe{background:var(--ts)}.tbf.warn{background:var(--tw)}.tbf.danger{background:var(--td)}
+.qbadges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:clamp(.5rem,1.2vw,1rem)}
+.qb{font-size:11px;padding:3px 12px;border-radius:99px;font-weight:600;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.2);color:var(--gold)}
+.qemoji{font-size:clamp(34px,6vw,62px);letter-spacing:4px;margin-bottom:clamp(.5rem,1.2vw,1rem);line-height:1.3}
+.qtxt{font-size:clamp(15px,1.8vw,20px);font-weight:600;line-height:1.55;color:var(--text);margin-bottom:clamp(.4rem,1vw,.8rem)}
+.qdlg{font-size:clamp(15px,1.7vw,19px);font-style:italic;font-weight:500;color:#C9B8FF;line-height:1.65;border-left:3px solid var(--da);padding-left:16px;margin-bottom:clamp(.4rem,1vw,.8rem)}
+.fb{min-height:26px;font-size:clamp(12px,1.3vw,15px);font-weight:600;margin-top:8px}
+.fb.ok{color:var(--ts)}.fb.fail{color:var(--td)}
+.sr{font-size:13px;color:var(--gold);font-weight:700;min-height:20px;margin-top:4px}
+.opts{display:flex;flex-direction:column;gap:clamp(8px,1vw,12px)}
+.opt{background:var(--card2);border:1.5px solid rgba(255,255,255,.08);border-radius:14px;padding:clamp(11px,1.5vw,15px) clamp(12px,1.5vw,18px);cursor:pointer;font-size:clamp(13px,1.4vw,15px);font-weight:500;font-family:'Poppins',sans-serif;color:var(--text);text-align:left;transition:all .15s;display:flex;align-items:center;gap:12px}
+.opt:hover:not(:disabled){border-color:rgba(255,215,0,.4);background:var(--card3)}
+.ol{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;color:var(--gold)}
+.opt.correct{background:rgba(46,204,113,.15)!important;border-color:#2ECC71!important;color:#2ECC71}
+.opt.correct .ol{background:#2ECC71;color:#000}
+.opt.wrong{background:rgba(231,76,60,.12)!important;border-color:#E74C3C!important;color:#E74C3C}
+.opt.wrong .ol{background:#E74C3C;color:#fff}
+.opt.reveal{opacity:.4}.opt:disabled{cursor:default}
+/* ─── EMOJI TEXT INPUT ─── */
+.emoji-input-wrap{display:flex;flex-direction:column;gap:12px}
+.emoji-ans-input{background:var(--card2);border:1.5px solid rgba(255,255,255,.12);border-radius:14px;padding:clamp(13px,1.8vw,18px) clamp(14px,2vw,20px);font-size:clamp(15px,1.8vw,19px);font-weight:600;font-family:'Poppins',sans-serif;color:var(--text);outline:none;transition:border .2s,background .2s;width:100%}
+.emoji-ans-input:focus{border-color:var(--gold);background:var(--card3)}
+.emoji-ans-input::placeholder{color:var(--muted);font-weight:400}
+.emoji-ans-input:disabled{opacity:.6;cursor:default}
+.emoji-submit-btn{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#111;border:none;border-radius:14px;padding:clamp(12px,1.5vw,15px) 24px;font-size:clamp(14px,1.5vw,16px);font-weight:700;font-family:'Poppins',sans-serif;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px}
+.emoji-submit-btn:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.emoji-submit-btn:disabled{opacity:.4;cursor:default}
+.emoji-answer-reveal{font-size:clamp(15px,1.8vw,18px);font-weight:700;padding:clamp(13px,1.5vw,16px);border-radius:14px;background:rgba(46,204,113,.12);border:1.5px solid #2ECC71;color:#2ECC71;display:none;text-align:center}
+.emoji-answer-reveal.wrong{background:rgba(231,76,60,.12);border-color:#E74C3C;color:#E74C3C}
+.waiting-banner{font-size:13px;color:var(--muted);text-align:center;padding:10px;background:rgba(255,255,255,.04);border-radius:10px;display:none}
+
+/* ─── RESULTS ─── */
+#screen-results{align-items:center;justify-content:center;padding:clamp(1rem,3vw,2rem)}
+.ri{width:100%;max-width:880px;display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.5rem,3vw,2.5rem);align-items:center}
+@media(max-width:680px){.ri{grid-template-columns:1fr;max-width:420px;text-align:center}}
+.rbs{font-family:'Bebas Neue',cursive;font-size:clamp(80px,12vw,130px);background:linear-gradient(135deg,var(--gold),var(--gold2),#FF6B9D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:.9}
+.rl{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.rb{background:var(--card);border:1px solid rgba(255,215,0,.2);border-radius:16px;padding:16px 20px;font-size:clamp(13px,1.4vw,16px);margin:12px 0}
+.rbtns{display:flex;flex-direction:column;gap:10px}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.sc{background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:clamp(12px,2vw,18px) 12px;text-align:center}
+.scv{font-size:clamp(18px,3vw,26px);font-weight:800}
+.scl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.rev{background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:14px 16px;max-height:260px;overflow-y:auto}
+.rev::-webkit-scrollbar{width:4px}.rev::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}
+.revt{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.revi{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px}
+.revi:last-child{border-bottom:none}
+.revq{color:var(--muted);flex:1;line-height:1.4}
+.reva{color:var(--text);font-weight:600;white-space:nowrap}
+
+/* ─── LEADERBOARD ─── */
+#screen-leaderboard{align-items:center;justify-content:flex-start;padding:clamp(1rem,2.5vw,2rem);padding-top:clamp(1.5rem,3vw,2.5rem)}
+.lbi{width:100%;max-width:920px;display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.5rem,3vw,2.5rem);align-items:start}
+@media(max-width:680px){.lbi{grid-template-columns:1fr;max-width:460px}}
+.lbig{font-family:'Bebas Neue',cursive;font-size:clamp(36px,5vw,56px);color:var(--gold);letter-spacing:2px}
+.lbtabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.lbtab{padding:7px 15px;border-radius:99px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-family:'Poppins',sans-serif;font-weight:600;transition:all .15s}
+.lbtab.active{background:var(--gold);color:#111;border-color:var(--gold)}
+.lbbox{background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:clamp(.9rem,2vw,1.4rem)}
+.lbrow{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:10px;transition:background .15s}
+.lbrow:hover{background:var(--dark3)}
+.lbrow.you{background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15);border-radius:10px}
+.lbrk{width:30px;text-align:center;font-size:20px}
+.lbrk.t{font-weight:800;font-size:14px;color:var(--muted)}
+.lbav{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.lbn{flex:1;font-size:14px;font-weight:600}
+.lbyt{font-size:10px;color:var(--gold);margin-left:6px;letter-spacing:.5px;font-weight:700}
+.lbp{font-size:16px;font-weight:800;color:var(--gold)}
+.lbdv{height:1px;background:rgba(255,255,255,.04);margin:2px 0}
+.lbem{text-align:center;padding:2rem;color:var(--muted);font-size:14px}
+
+/* ─── CONFIG MODAL ─── */
+#cfgm{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem}
+.cfgb{background:var(--card);border:1px solid rgba(255,215,0,.2);border-radius:22px;padding:2rem;width:100%;max-width:480px}
+.cfgh{font-family:'Bebas Neue',cursive;font-size:30px;color:var(--gold);letter-spacing:1px;margin-bottom:6px}
+.cfgp{font-size:13px;color:var(--muted);margin-bottom:1.25rem;line-height:1.6}
+.ctabs{display:flex;gap:6px;margin-bottom:1.25rem}
+.ctab{padding:6px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-family:'Poppins',sans-serif;font-weight:600}
+.ctab.active{background:var(--gold);color:#111;border-color:var(--gold)}
+.cf{margin-bottom:.75rem}
+.cf label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:4px}
+.cf input{width:100%;background:var(--dark3);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);font-family:'Poppins',sans-serif;outline:none;transition:border .2s}
+.cf input:focus{border-color:var(--gold)}
+.csteps{background:var(--dark3);border-radius:10px;padding:.75rem 1rem;font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:1rem}
+.csteps code{color:var(--gold);font-family:monospace}
+.cskip{font-size:12px;color:var(--muted);text-align:center;margin-top:.75rem;cursor:pointer;text-decoration:underline}
+.cskip:hover{color:var(--text)}
+
+/* ─── TOAST ─── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 20px;font-size:14px;color:var(--text);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}
+</style>
+</head>
+<body>
+
+<!-- CONFIG MODAL -->
+<div id="cfgm">
+  <div class="cfgb">
+    <div class="cfgh">🔧 Setup</div>
+    <p class="cfgp">Connect Firebase for real-time multiplayer (40+ users), or use Demo mode to test locally.</p>
+    <div class="ctabs">
+      <button class="ctab active" onclick="cfgTab('fb',this)">🔴 Firebase Live</button>
+      <button class="ctab" onclick="cfgTab('demo',this)">🟡 Demo Mode</button>
+    </div>
+    <div id="cfg-fb">
+      <div class="csteps">1. Go to <code>console.firebase.google.com</code><br>2. New Project → Realtime Database → Test mode<br>3. Project Settings → Your Apps → copy config</div>
+      <div class="cf"><label>API Key</label><input id="f-apikey" placeholder="AIzaSy..."></div>
+      <div class="cf"><label>Database URL</label><input id="f-db" placeholder="https://your-app-rtdb.firebaseio.com"></div>
+      <div class="cf"><label>Project ID</label><input id="f-proj" placeholder="your-project-id"></div>
+      <div class="cf"><label>Auth Domain</label><input id="f-auth" placeholder="your-app.firebaseapp.com"></div>
+      <button class="btn btp" onclick="initFirebase()" style="margin-top:.5rem">Connect & Play 🚀</button>
+    </div>
+    <div id="cfg-demo" style="display:none">
+      <p style="font-size:14px;color:var(--text);line-height:1.7;margin-bottom:1rem">Scores stored locally. Great for testing or single-device play. For real multiplayer, use Firebase.</p>
+      <button class="btn btp" onclick="initDemo()">Play in Demo Mode</button>
+    </div>
+    <p class="cskip" onclick="initDemo()">Skip → Demo mode</p>
+  </div>
+</div>
+
+<!-- WELCOME SCREEN -->
+<div id="screen-welcome" class="screen">
+  <div class="wi">
+    <div class="wl">
+      <div class="logo">Bollywood<br>Quiz<br>Arena</div>
+      <div class="logo-sub">Filmy Knowledge Test</div>
+      <div class="ob"><span class="dot"></span><span id="oc">0</span>&nbsp;players online</div>
+    </div>
+    <div class="rp">
+      <div class="pc">
+        <div class="pl">Your Name</div>
+        <input type="text" class="ni" id="pname" placeholder="Enter your name..." maxlength="18" autocomplete="off">
+      </div>
+      <div class="pc">
+        <div class="pl">Choose Game Mode</div>
+        <div class="gcs">
+          <div class="gc sm" id="gc-movie" onclick="selGame('movie',this)">
+            <div class="gci">🎬</div><div class="gcn">Movie</div><div class="gcs2">Clue-based</div>
+          </div>
+          <div class="gc" id="gc-emoji" onclick="selGame('emoji',this)">
+            <div class="gci">🤩</div><div class="gcn">Emoji</div><div class="gcs2">Guess film</div>
+          </div>
+          <div class="gc" id="gc-dialogue" onclick="selGame('dialogue',this)">
+            <div class="gci">💬</div><div class="gcn">Dialogue</div><div class="gcs2">Iconic lines</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btp" onclick="startGame()">🎬 Start Quiz</button>
+      <button class="btn btg" onclick="goLb()" style="padding:11px 24px;font-size:14px;font-weight:700;cursor:pointer">🏆 Leaderboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ SCREEN -->
+<div id="screen-quiz" class="screen">
+  <div class="qtop">
+    <div class="qplayer">Playing as <strong id="plabel">—</strong></div>
+    <div class="qsw"><div class="qsl">Score</div><div class="qsv" id="lscore">0</div></div>
+    <div class="qright">
+      <div class="qtag tmovie" id="mtag">🎬 Movie</div>
+      <button class="btn btg" style="width:auto;padding:7px 14px;font-size:12px;cursor:pointer" onclick="quitGame()">✕ Quit</button>
+    </div>
+  </div>
+  <div class="qpw">
+    <div class="qpm"><span>Question <span id="qnum">1</span> / <span id="qtot">10</span></span><span id="qptl" style="color:var(--gold)">100 pts</span></div>
+    <div class="qpt"><div class="qpf" id="prog" style="width:0%"></div></div>
+  </div>
+  <div class="qbody">
+    <div class="qleft">
+      <div class="tw">
+        <div class="tm"><span class="tl">Time Left</span><span class="tn safe" id="tnum">15</span></div>
+        <div class="tbt"><div class="tbf safe" id="tbar" style="width:100%"></div></div>
+      </div>
+      <div class="qbadges" id="hrow"></div>
+      <div class="qemoji" id="qemoji" style="display:none"></div>
+      <div class="qtxt" id="qtxt"></div>
+      <div class="fb" id="fb"></div>
+      <div class="sr" id="srow"></div>
+    </div>
+    <div class="qr">
+      <div class="opts" id="ogrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS SCREEN -->
+<div id="screen-results" class="screen">
+  <div class="ri">
+    <div>
+      <div class="rbs" id="rscore">0</div>
+      <div class="rl">Points Scored</div>
+      <div class="rb" id="rmsg">Calculating...</div>
+      <div class="rbtns">
+        <button class="btn btp" onclick="playAgain()">▶ Play Again</button>
+        <button class="btn btg" onclick="goLb()" style="padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">🏆 Leaderboard</button>
+      </div>
+    </div>
+    <div>
+      <div class="sg">
+        <div class="sc"><div class="scv" id="rcorrect">0</div><div class="scl">Correct</div></div>
+        <div class="sc"><div class="scv" id="rstreak">0</div><div class="scl">Streak</div></div>
+        <div class="sc"><div class="scv" id="rrank">—</div><div class="scl">Rank</div></div>
+      </div>
+      <div class="rev"><div class="revt">Round Summary</div><div id="revlist"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARD SCREEN -->
+<div id="screen-leaderboard" class="screen">
+  <div class="lbi">
+    <div>
+      <div class="lbig">🏆 Leaderboard</div>
+      <div class="ob" style="margin-top:10px;display:inline-flex"><span class="dot"></span><span id="lbo">0</span>&nbsp;online</div>
+      <div class="lbtabs">
+        <button class="lbtab active" onclick="renderLb('all');setLbt(this)">All Games</button>
+        <button class="lbtab" onclick="renderLb('movie');setLbt(this)">🎬 Movie</button>
+        <button class="lbtab" onclick="renderLb('emoji');setLbt(this)">🤩 Emoji</button>
+        <button class="lbtab" onclick="renderLb('dialogue');setLbt(this)">💬 Dialogue</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn btg" style="width:auto;padding:9px 16px;font-size:13px;cursor:pointer" onclick="showS('screen-welcome')">← Back</button>
+        <button class="btn btg" style="width:auto;padding:9px 16px;font-size:13px;cursor:pointer" onclick="renderLb(curTab)">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="lbbox" id="lblist"><div class="lbem">Loading...</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// QUESTION BANKS
+// ══════════════════════════════════════════════
+const MQ=[
+  {hint:"1975|Action|Cult Classic",q:"Jai and Veeru are hired by a retired cop to catch the dacoit Gabbar Singh.",opts:["Deewar","Sholay","Zanjeer","Muqaddar Ka Sikandar"],ans:1,pts:100},
+  {hint:"1994|Romance|Yash Raj",q:"Raj and Simran fall in love in Europe but her family has fixed her marriage in Punjab.",opts:["Mohabbatein","Kuch Kuch Hota Hai","DDLJ","Dil To Pagal Hai"],ans:2,pts:100},
+  {hint:"2009|Drama|Aamir Khan",q:"Three engineering students rebel against a pressure-filled college system. 'All Izz Well!'",opts:["Taare Zameen Par","Dil Chahta Hai","Rang De Basanti","3 Idiots"],ans:3,pts:100},
+  {hint:"2016|Sports Drama|Aamir Khan",q:"A retired wrestler trains his daughters Geeta and Babita to become world champions.",opts:["Sultan","Bhaag Milkha Bhaag","Mary Kom","Dangal"],ans:3,pts:100},
+  {hint:"2007|Children's|Aamir Khan",q:"A dyslexic 8-year-old sent to boarding school finds his gift through a compassionate art teacher.",opts:["Stanley Ka Dabba","Chillar Party","I Am Kalam","Taare Zameen Par"],ans:3,pts:100},
+  {hint:"2000|Historical|Aamir Khan",q:"A village bets against the British — win at cricket and pay no taxes for 3 years.",opts:["Swades","Mughal-E-Azam","Mangal Pandey","Lagaan"],ans:3,pts:150},
+  {hint:"2008|Thriller|Aamir Khan",q:"A man with 15-minute memory loss uses tattoos and Polaroids to hunt his girlfriend's killer.",opts:["Kahaani","A Wednesday","Drishyam","Ghajini"],ans:3,pts:150},
+  {hint:"2008|Biopic|Ranbir Kapoor",q:"A Delhi musician's heartbreak fuels his rise to rock stardom.",opts:["Tamasha","Rock On!!","Bachna Ae Haseeno","Rockstar"],ans:3,pts:150},
+  {hint:"2011|Comedy|Amitabh+Deepika",q:"A constipated father and his daughter drive from Delhi to Kolkata on a memorable road trip.",opts:["Highway","Ki & Ka","Piku","Dil Dhadakne Do"],ans:2,pts:150},
+  {hint:"2019|War Drama|Vicky Kaushal",q:"Indian forces carry out a surgical strike across the LoC after an army camp attack.",opts:["Phantom","Shershaah","Raazi","URI: The Surgical Strike"],ans:3,pts:150},
+  {hint:"2011|Action|Ajay Devgn",q:"A fierce honest cop takes on a powerful don in Goa in this Rohit Shetty franchise opener.",opts:["Rowdy Rathore","Dabangg","Bol Bachchan","Singham"],ans:3,pts:100},
+  {hint:"2013|Zombie Comedy|Saif Ali Khan",q:"Friends on a Goa vacation face a zombie apocalypse on the island.",opts:["Bhoot Police","Stree","Roohi","Go Goa Gone"],ans:3,pts:150},
+  {hint:"2013|Dance Drama|Varun Dhawan",q:"A street dancer and a trained dancer compete then team up for a national championship.",opts:["Street Dancer 3D","ABCD: Any Body Can Dance","Dance India Dance","ABCD 2"],ans:1,pts:100},
+  {hint:"2023|Comedy Drama|Shah Rukh Khan",q:"Friends take the risky 'Donkey' illegal immigration route across countries to reach the UK.",opts:["Jab Harry Met Sejal","Fan","Zero","Dunki"],ans:3,pts:150},
+  {hint:"2011|Sci-Fi|Shah Rukh Khan",q:"A video game villain Ra.One escapes the virtual world and only the hero G.One can stop him.",opts:["Krrish 3","Robot","Ra.One","Mr. India"],ans:2,pts:100},
+  {hint:"2006|Comedy|Akshay+Suniel+Paresh",q:"Three friends try to recover a large sum of money through a phone con — total mayhem follows.",opts:["Hera Pheri","Dhamaal","Welcome","Phir Hera Pheri"],ans:3,pts:150},
+  {hint:"2007|Supernatural|Akshay Kumar",q:"A psychiatrist uncovers a haunted haveli where a woman is possessed by the spirit Manjulika.",opts:["Raaz","1920","Haunted 3D","Bhool Bhulaiyaa"],ans:3,pts:100},
+  {hint:"2012|Social Satire|Akshay Kumar",q:"A common man sues God after a natural disaster destroys his property — religion goes on trial.",opts:["PK","Jolly LLB","OMG Oh My God","Dhamaal"],ans:2,pts:100},
+  {hint:"2003|Comedy Drama|Sanjay Dutt",q:"A rowdy gangster studies medicine and heals patients with warmth and his signature 'jaadu ki jhappi'.",opts:["Lage Raho Munna Bhai","Sanju","Vaastav","Munna Bhai M.B.B.S."],ans:3,pts:100},
+  {hint:"1986|Fantasy|Sridevi",q:"A woman discovers she was a serpent in her past life seeking revenge for her mate.",opts:["Chandni","Lamhe","Nagina","Nagin"],ans:2,pts:200},
+  {hint:"2019|Historical|Akshay Kumar",q:"21 Sikh soldiers defend Saragarhi fort against 10,000 Afghan invaders.",opts:["Baaghi 3","Paltan","The Legend of Bhagat Singh","Kesari"],ans:3,pts:150},
+];
+
+const EQ=[
+  {emoji:"🦁 👮‍♂️ 👊",q:"A fierce honest cop takes on a powerful don in Goa.",opts:["Dabangg","Rowdy Rathore","Sooryavanshi","Singham"],ans:3,pts:100},
+  {emoji:"🐍 🎷 💃",q:"A woman is secretly a serpent spirit who dances to hypnotic music to take revenge.",opts:["Nagina","Nagin","Lamhe","Chandni"],ans:0,pts:100},
+  {emoji:"🏥 👨‍⚕️ 🩺 🫂",q:"A gangster infiltrates a hospital and heals patients with warm hugs.",opts:["Lage Raho Munna Bhai","Dil Dhadakne Do","Vaastav","Munna Bhai M.B.B.S."],ans:3,pts:100},
+  {emoji:"🕺 💃 👟 🏆",q:"Street dancers compete in a national championship — anybody can dance!",opts:["Street Dancer 3D","ABCD 2","Jhoom Barabar Jhoom","ABCD: Any Body Can Dance"],ans:3,pts:100},
+  {emoji:"🏏 💰 🌧️",q:"A village challenges British soldiers: win cricket, pay no taxes.",opts:["Swades","Chak De India","83","Lagaan"],ans:3,pts:100},
+  {emoji:"🚁 🪖 🎖️",q:"Indian army crosses the Line of Control in a bold surgical strike.",opts:["Phantom","Shershaah","Raazi","URI: The Surgical Strike"],ans:3,pts:100},
+  {emoji:"📸 ✍️ 💪 🧠",q:"A man with short-term memory loss uses photos and tattoos to find a killer.",opts:["Kahaani","Drishyam","Ek Hasina Thi","Ghajini"],ans:3,pts:100},
+  {emoji:"✈️ 🧳 🌍 🚶‍♂️",q:"Friends take a risky illegal immigration route across continents to reach the UK.",opts:["Zero","Jab Tak Hai Jaan","Kal Ho Naa Ho","Dunki"],ans:3,pts:100},
+  {emoji:"🧟‍♂️ 🏝️ 🔫 🚬",q:"Stoner friends on a Goa holiday face a zombie apocalypse on the island.",opts:["Bhoot Police","Stree","Roohi","Go Goa Gone"],ans:3,pts:100},
+  {emoji:"👳‍♂️ ⚔️ 🏰 🔥",q:"21 Sikh warriors defend a fort against thousands of Afghan invaders.",opts:["Baaghi 3","Haider","Paltan","Kesari"],ans:3,pts:100},
+  {emoji:"🚗 🚽 👴 💊",q:"A daughter and her constipated father drive from Delhi to Kolkata.",opts:["Highway","Ki & Ka","Dil Dhadakne Do","Piku"],ans:3,pts:150},
+  {emoji:"🎸 🎤 🧣 💔",q:"A Delhi boy's heartbreak fuels his transformation into a legendary rock musician.",opts:["Tamasha","Rock On!!","Fukrey","Rockstar"],ans:3,pts:150},
+  {emoji:"🎨 👦 🌟 🏫",q:"A dyslexic boy's hidden talent is discovered by a compassionate art teacher.",opts:["I Am Kalam","Chillar Party","Stanley Ka Dabba","Taare Zameen Par"],ans:3,pts:100},
+  {emoji:"📞 👴 👨 👨 💰",q:"Three friends try to recover crores through a phone con — total chaos follows.",opts:["Hera Pheri","Dhamaal","Welcome","Phir Hera Pheri"],ans:3,pts:150},
+  {emoji:"🤖 🔴 🎮 🦸‍♂️ 🔵",q:"A video game villain comes to life and only the hero G.One can stop Ra.One.",opts:["Krrish 3","Robot","Mr. India","Ra.One"],ans:3,pts:100},
+  {emoji:"🧔 ⚖️ 🕉️ ☪️ ✝️",q:"A common man takes God to court after suffering a natural disaster.",opts:["PK","3 Idiots","Jolly LLB","OMG Oh My God"],ans:3,pts:100},
+  {emoji:"🏰 👻 💃 🕯️",q:"A psychiatrist uncovers a haunted haveli and a woman possessed by Manjulika.",opts:["Raaz","1920","Haunted 3D","Bhool Bhulaiyaa"],ans:3,pts:100},
+];
+
+const DQ=[
+  {dialogue:'"Tumse na ho payega."',q:"Said by a struggling underground rapper in Mumbai battling self-doubt.",opts:["Super 30","Article 15","Bard of Blood","Gully Boy"],ans:3,pts:100},
+  {dialogue:'"Main aaj bhi phenke hue paise nahi uthata."',q:"A proud self-made smuggler confronts his honest policeman brother.",opts:["Sholay","Zanjeer","Deewar","Agneepath"],ans:2,pts:150},
+  {dialogue:'"Paghar badhao, paghar badhao… itne paise mein ghar nahi chalta, sala imaan kaise chalega."',q:"A desperate dock worker confronts his exploitative boss in this remake.",opts:["Gangs of Wasseypur","Deewar","Sarkar","Agneepath"],ans:3,pts:150},
+  {dialogue:'"Baap ka, dada ka, bhai ka… sabka badla lega re tera Faizal."',q:"Faizal Khan swears revenge for his family in a Jharkhand coal-mafia saga.",opts:["Mirzapur","Satya","Black Friday","Gangs of Wasseypur"],ans:3,pts:150},
+  {dialogue:'"Zindagi mein teen cheezein kabhi underestimate mat karna… I, me and myself."',q:"A flamboyant self-obsessed character delivers this comedic punchline.",opts:["Judwaa 2","Golmaal","Partner","Ready"],ans:3,pts:100},
+  {dialogue:'"Apne ko kya hai, apne ko sirf paani nikalna hai."',q:"A carefree sidekick who only wants to draw water, unbothered by surrounding chaos.",opts:["Rowdy Rathore","Welcome","Dhamaal","Boss"],ans:3,pts:150},
+  {dialogue:'"Gold toh gold hota hai… chhora laave ya chhori."',q:"A father insists his daughter\'s wrestling gold is equal to any man\'s.",opts:["Sultan","Mary Kom","Bhaag Milkha Bhaag","Dangal"],ans:3,pts:100},
+  {dialogue:'"Mera naam Rani hai… aur main apni favorite hoon."',q:"A shy small-town woman discovers herself on a solo honeymoon trip to Paris.",opts:["Cocktail","English Vinglish","Highway","Queen"],ans:3,pts:100},
+  {dialogue:'"Koi tumhe tab tak nahi hara sakta… jab tak tum khud se na haar jao."',q:"A wrestler\'s motivational line about inner strength in a Salman Khan sports drama.",opts:["Bajarangi Bhaijaan","Tiger Zinda Hai","Tubelight","Sultan"],ans:3,pts:100},
+  {dialogue:'"Mujhe sab yaad aa raha hai… par main bhool gaya hoon!"',q:"A comically confused character makes a hilarious contradictory statement.",opts:["Andaz Apna Apna","Dhamaal","Mujhse Shaadi Karogi","Bhagam Bhag"],ans:3,pts:150},
+  {dialogue:'"Don\'t angry me!"',q:"A short-tempered cop warns villains in this Prabhu Deva mass entertainer.",opts:["Singham","Dabangg","Bol Bachchan","Rowdy Rathore"],ans:3,pts:100},
+  {dialogue:'"Bacha hai tu mera."',q:"A powerful villain\'s chilling claim over the hero in this action blockbuster.",opts:["Agneepath","Raees","KGF Chapter 2","Dhurandhar"],ans:3,pts:200},
+  {dialogue:'"Agar shakal dekh ke ladkiyan shaadi kare na… toh Hindustan mein aadhe ladke kanware hote."',q:"A man humorously confesses his own average looks to explain why looks don't matter.",opts:["Stree","Shubh Mangal Saavdhan","Dum Laga Ke Haisha","Bareilly Ki Barfi"],ans:3,pts:150},
+  {dialogue:'"Utha le re baba… utha le… mere ko nahi re… in dono ko utha le!"',q:"A desperate man begs God to take his two troublesome companions instead of him.",opts:["Dhamaal","Bhagam Bhag","Phir Hera Pheri","Hera Pheri"],ans:3,pts:100},
+  {dialogue:'"Yeh dukh kaahe khatam nahi hota re!"',q:"A heartbroken young man laments his endless sorrow in this critically acclaimed drama.",opts:["Dev.D","Lootera","Ship of Theseus","Masaan"],ans:3,pts:200},
+  {dialogue:'"Problem ladki nahi hai… problem ladka bhi nahi hai… problem main hoon!"',q:"A man caught in a love triangle admits the real problem is himself.",opts:["Kal Ho Naa Ho","Dostana","Dil Dhadakne Do","Partner"],ans:3,pts:150},
+  {dialogue:'"Arre bhai sahab, yo London-England kuch na hai… asli maza to apne Haryana mein hai!"',q:"A fiercely desi man insists no foreign city matches the charm of his home state.",opts:["Band Baaja Baaraat","Tanu Weds Manu","Jab We Met","Tanu Weds Manu Returns"],ans:3,pts:150},
+  {dialogue:'"Tera baap yahan chhodke gaya tha ki teri maa…"',q:"A gangster taunts a rival about his origins in this hit Bollywood comedy franchise.",opts:["Hera Pheri","Phir Hera Pheri","No Entry","Welcome"],ans:3,pts:100},
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let pname='',game='movie',curQ=0,score=0,streak=0,best=0,correct=0;
+let tint=null,tl=15,answered=false;
+let useFB=false,db=null;
+let qs=[],revLog=[];
+let curTab='all';
+let mySessionId=null,sessionRef=null;
+let waitingForReveal=false;
+const AVC=['#845EF7','#FF6B9D','#20C997','#FFA94D','#4DABF7','#F06595','#A9E34B','#FF6B6B','#74C0FC','#63E6BE'];
+
+// ══════════════════════════════════════════════
+// FIREBASE/DEMO
+// ══════════════════════════════════════════════
+function cfgTab(t,el){
+  document.querySelectorAll('.ctab').forEach(e=>e.classList.remove('active'));el.classList.add('active');
+  document.getElementById('cfg-fb').style.display=t==='fb'?'block':'none';
+  document.getElementById('cfg-demo').style.display=t==='demo'?'block':'none';
+}
+function initFirebase(){
+  const ak=document.getElementById('f-apikey').value.trim();
+  const du=document.getElementById('f-db').value.trim();
+  const pid=document.getElementById('f-proj').value.trim();
+  const ad=document.getElementById('f-auth').value.trim()||pid+'.firebaseapp.com';
+  if(!ak||!du){toast('Fill API Key & Database URL');return;}
+  try{
+    firebase.initializeApp({apiKey:ak,authDomain:ad,databaseURL:du,projectId:pid});
+    db=firebase.database();useFB=true;
+    document.getElementById('cfgm').style.display='none';
+    showS('screen-welcome');trackOnline();listenOnline();toast('🟢 Firebase connected!');
+  }catch(e){toast('Error: '+e.message);}
+}
+function initDemo(){
+  useFB=false;document.getElementById('cfgm').style.display='none';
+  showS('screen-welcome');simOnline();toast('Demo mode active');
+}
+function trackOnline(){
+  if(!useFB)return;
+  const id='p_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  mySessionId=id;
+  const ref=db.ref('online/'+id);ref.set({t:Date.now(),name:pname||'Anonymous'});ref.onDisconnect().remove();
+  setInterval(()=>ref.set({t:Date.now(),name:pname||'Anonymous'}),25000);
+  // Remove score from leaderboard on disconnect
+  window.addEventListener('beforeunload',()=>{
+    if(useFB&&db&&pname){
+      // Use sendBeacon to attempt synchronous removal - best effort
+      db.ref('online/'+id).remove();
+    }
+  });
+}
+function listenOnline(){
+  if(!useFB)return;
+  db.ref('online').on('value',s=>{const n=s.numChildren();setOC(n);});
+}
+function simOnline(){
+  let b=35+Math.floor(Math.random()*10);setOC(b);
+  setInterval(()=>{b=Math.max(28,Math.min(55,b+Math.floor(Math.random()*5)-2));setOC(b);},3500);
+}
+function setOC(n){['oc','lbo'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=n;});}
+
+// ══════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════
+function showS(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function goLb(){showS('screen-leaderboard');renderLb(curTab);}
+
+// ══════════════════════════════════════════════
+// WELCOME
+// ══════════════════════════════════════════════
+function selGame(g,el){
+  document.querySelectorAll('.gc').forEach(c=>c.classList.remove('sm','se','sd'));
+  el.classList.add(g==='movie'?'sm':g==='emoji'?'se':'sd');game=g;
+}
+function startGame(){
+  const n=document.getElementById('pname').value.trim();
+  if(!n){document.getElementById('pname').focus();toast('Enter your name!');return;}
+  pname=n;curQ=0;score=0;streak=0;best=0;correct=0;revLog=[];waitingForReveal=false;
+  const bank=game==='movie'?MQ:game==='emoji'?EQ:DQ;
+  qs=shuf([...bank]).slice(0,10);
+  document.getElementById('plabel').textContent=pname;
+  document.getElementById('qtot').textContent=qs.length;
+  const tag=document.getElementById('mtag');
+  tag.className='qtag '+(game==='movie'?'tmovie':game==='emoji'?'temoji':'tdialogue');
+  tag.textContent=game==='movie'?'🎬 Movie':game==='emoji'?'🤩 Emoji':'💬 Dialogue';
+  // Register active player session (remove from leaderboard if they leave mid-game)
+  if(useFB&&db){
+    const sid='session_'+pname.replace(/[.#$/[\]]/g,'_')+'_'+Date.now();
+    mySessionId=sid;
+    sessionRef=db.ref('activePlayers/'+sid);
+    sessionRef.set({name:pname,game,ts:Date.now()});
+    sessionRef.onDisconnect().remove();
+    // Also listen to remove stale scores if player disconnects mid-game
+    window.addEventListener('beforeunload',()=>{
+      if(sessionRef)sessionRef.remove();
+    });
+  }
+  showS('screen-quiz');loadQ();
+}
+
+// ══════════════════════════════════════════════
+// QUIZ
+// ══════════════════════════════════════════════
+function shuf(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function loadQ(){
+  if(curQ>=qs.length){endGame();return;}
+  answered=false;waitingForReveal=false;
+  const q=qs[curQ];
+  document.getElementById('qnum').textContent=curQ+1;
+  document.getElementById('prog').style.width=((curQ/qs.length)*100)+'%';
+  document.getElementById('qptl').textContent=q.pts+' pts';
+  document.getElementById('fb').textContent='';document.getElementById('fb').className='fb';
+  document.getElementById('srow').textContent=streak>=2?'🔥 '+streak+' in a row!':'';
+  document.getElementById('lscore').textContent=score.toLocaleString();
+
+  const hr=document.getElementById('hrow');hr.innerHTML='';
+  const qe=document.getElementById('qemoji');
+  const qt=document.getElementById('qtxt');
+  const grid=document.getElementById('ogrid');grid.innerHTML='';
+
+  if(game==='emoji'){
+    // No hints shown for emoji mode
+    hr.innerHTML='';
+    qe.style.display='block';qe.textContent=q.emoji;
+    qt.textContent=q.q;
+    // Text input instead of options
+    grid.innerHTML=`
+      <div class="emoji-input-wrap">
+        <input class="emoji-ans-input" id="emoji-input" type="text" placeholder="Type the movie name..." autocomplete="off" spellcheck="false" maxlength="60">
+        <button class="emoji-submit-btn" id="emoji-submit-btn" onclick="doEmojiAnswer()">✓ Submit Answer</button>
+        <div class="emoji-answer-reveal" id="emoji-reveal"></div>
+        <div class="waiting-banner" id="waiting-banner">⏳ Waiting for all players to answer...</div>
+      </div>`;
+    document.getElementById('emoji-input').addEventListener('keydown',e=>{if(e.key==='Enter')doEmojiAnswer();});
+  } else if(game==='dialogue'){
+    qe.style.display='none';
+    qt.innerHTML='<div class="qdlg">'+q.dialogue+'</div><div style="font-size:clamp(13px,1.4vw,15px);color:var(--muted);margin-top:.5rem">'+q.q+'</div>';
+    buildOptionButtons(q,grid);
+  } else {
+    // Movie mode — show hints
+    qe.style.display='none';
+    q.hint.split('|').forEach(h=>{const b=document.createElement('span');b.className='qb';b.textContent=h.trim();hr.appendChild(b);});
+    qt.textContent=q.q;
+    buildOptionButtons(q,grid);
+  }
+
+  tl=15;updTimer(15,15);clearInterval(tint);
+  tint=setInterval(()=>{tl--;updTimer(tl,15);if(tl<=0){clearInterval(tint);timeUp();}},1000);
+}
+
+function buildOptionButtons(q,grid){
+  const labels=['A','B','C','D'];
+  const idxs=shuf([0,1,2,3]);
+  idxs.forEach((oi,pos)=>{
+    const b=document.createElement('button');b.className='opt';
+    b.innerHTML=`<span class="ol">${labels[pos]}</span>${q.opts[oi]}`;
+    b.dataset.orig=oi;b.onclick=()=>doAnswer(oi);
+    grid.appendChild(b);
+  });
+}
+
+function updTimer(t,mx){
+  const pct=(t/mx)*100;
+  const bar=document.getElementById('tbar'),num=document.getElementById('tnum');
+  bar.style.width=pct+'%';
+  const c=t>8?'safe':t>4?'warn':'danger';
+  bar.className='tbf '+c;num.className='tn '+c;num.textContent=t;
+}
+
+// ── Fuzzy match helper for emoji text input ──
+function normalize(s){return s.toLowerCase().replace(/[^a-z0-9\u0900-\u097f\s]/g,'').replace(/\s+/g,' ').trim();}
+function fuzzyMatch(input,correct){
+  const a=normalize(input),b=normalize(correct);
+  if(a===b)return true;
+  if(b.includes(a)&&a.length>=3)return true;
+  if(a.includes(b)&&b.length>=3)return true;
+  // Levenshtein for small differences
+  if(Math.abs(a.length-b.length)>4)return false;
+  let dp=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){let prev=i;for(let j=1;j<=b.length;j++){const tmp=dp[j];dp[j]=a[i-1]===b[j-1]?dp[j-1]:1+Math.min(dp[j-1],dp[j],prev);prev=tmp;}}
+  return dp[b.length]<=2;
+}
+
+function doEmojiAnswer(){
+  if(answered)return;
+  const inp=document.getElementById('emoji-input');
+  const val=inp?inp.value.trim():'';
+  if(!val){toast('Type the movie name!');return;}
+  answered=true;clearInterval(tint);
+  inp.disabled=true;
+  const btn=document.getElementById('emoji-submit-btn');if(btn)btn.disabled=true;
+  const q=qs[curQ];
+  const correct=q.opts[q.ans];
+  const ok=fuzzyMatch(val,correct);
+  let gained=0;
+  const fbEl=document.getElementById('fb');
+  if(ok){
+    const bonus=Math.round((tl/15)*q.pts*.5);gained=q.pts+bonus;score+=gained;
+    streak++;if(streak>best)best=streak;correct++;
+    fbEl.textContent='✓ Correct! +'+gained+(bonus>0?' (speed +'+bonus+')':'');fbEl.className='fb ok';
+    document.getElementById('srow').textContent=streak>=2?'🔥 '+streak+' in a row!':'';
+  } else {
+    streak=0;fbEl.textContent='✗ The answer was: '+correct;fbEl.className='fb fail';
+    document.getElementById('srow').textContent='';
+  }
+  revLog.push({a:correct,ok,gained});
+  document.getElementById('lscore').textContent=score.toLocaleString();
+  // Show waiting banner, reveal after time up
+  const wb=document.getElementById('waiting-banner');if(wb)wb.style.display='block';
+  waitingForReveal=true;
+}
+
+function revealEmojiAnswer(){
+  const q=qs[curQ];
+  const correct_ans=q.opts[q.ans];
+  const revEl=document.getElementById('emoji-reveal');
+  const wb=document.getElementById('waiting-banner');
+  if(wb)wb.style.display='none';
+  if(revEl){
+    const last=revLog[revLog.length-1];
+    revEl.style.display='block';
+    if(last&&last.ok){revEl.className='emoji-answer-reveal';revEl.textContent='✅ Answer: '+correct_ans;}
+    else{revEl.className='emoji-answer-reveal wrong';revEl.textContent='❌ Answer was: '+correct_ans;}
+  }
+  setTimeout(()=>{curQ++;loadQ();},2000);
+}
+
+function doAnswer(oi){
+  if(answered)return;answered=true;clearInterval(tint);
+  const q=qs[curQ];
+  document.querySelectorAll('.opt').forEach(b=>{
+    b.disabled=true;const bi=parseInt(b.dataset.orig);
+    if(bi===q.ans)b.classList.add('correct');
+    else if(bi===oi)b.classList.add('wrong');
+    else b.classList.add('reveal');
+  });
+  const ok=oi===q.ans;let gained=0;
+  const fbEl=document.getElementById('fb');
+  if(ok){
+    const bonus=Math.round((tl/15)*q.pts*.5);gained=q.pts+bonus;score+=gained;
+    streak++;if(streak>best)best=streak;correct++;
+    fbEl.textContent='✓ Correct! +'+gained+(bonus>0?' (speed +'+bonus+')':'');fbEl.className='fb ok';
+    document.getElementById('srow').textContent=streak>=2?'🔥 '+streak+' in a row!':'';
+  } else {
+    streak=0;fbEl.textContent='✗ '+q.opts[q.ans];fbEl.className='fb fail';
+    document.getElementById('srow').textContent='';
+  }
+  revLog.push({a:q.opts[q.ans],ok,gained});
+  document.getElementById('lscore').textContent=score.toLocaleString();
+  setTimeout(()=>{curQ++;loadQ();},1800);
+}
+
+function timeUp(){
+  if(answered){
+    // Player already answered, time's up — now reveal answer
+    if(game==='emoji'){revealEmojiAnswer();}
+    return;
+  }
+  answered=true;
+  const q=qs[curQ];
+  if(game==='emoji'){
+    // Disable input
+    const inp=document.getElementById('emoji-input');if(inp)inp.disabled=true;
+    const btn=document.getElementById('emoji-submit-btn');if(btn)btn.disabled=true;
+    const fbEl=document.getElementById('fb');fbEl.textContent="⏱ Time's up!";fbEl.className='fb fail';
+    streak=0;document.getElementById('srow').textContent='';
+    revLog.push({a:q.opts[q.ans],ok:false,gained:0});
+    revealEmojiAnswer();
+  } else {
+    document.querySelectorAll('.opt').forEach(b=>{b.disabled=true;if(parseInt(b.dataset.orig)===q.ans)b.classList.add('correct');else b.classList.add('reveal');});
+    streak=0;
+    const fb=document.getElementById('fb');fb.textContent="⏱ Time's up! — "+q.opts[q.ans];fb.className='fb fail';
+    document.getElementById('srow').textContent='';
+    revLog.push({a:q.opts[q.ans],ok:false,gained:0});
+    setTimeout(()=>{curQ++;loadQ();},1800);
+  }
+}
+
+async function endGame(){
+  clearInterval(tint);
+  if(sessionRef){sessionRef.remove();sessionRef=null;}
+  await saveScore();
+  const rank=await getMyRank();
+  document.getElementById('rscore').textContent=score.toLocaleString();
+  document.getElementById('rcorrect').textContent=correct+'/'+qs.length;
+  document.getElementById('rstreak').textContent=best;
+  document.getElementById('rrank').textContent=rank?'#'+rank:'—';
+  const rm=document.getElementById('rmsg');
+  if(rank===1)rm.innerHTML='👑 <strong>You\'re #1!</strong>';
+  else if(rank&&rank<=3)rm.innerHTML='🥈 <strong>Top 3 — rank #'+rank+'</strong>';
+  else if(rank&&rank<=10)rm.innerHTML='🎉 <strong>Top 10 at #'+rank+'!</strong>';
+  else rm.innerHTML='You scored <strong style="color:var(--gold)">'+score.toLocaleString()+' pts</strong>. Play again to climb!';
+  document.getElementById('revlist').innerHTML=revLog.map(r=>`<div class="revi"><span>${r.ok?'✅':'❌'}</span><span class="revq">${r.a}</span><span class="reva">${r.ok?'+'+r.gained:'0'}</span></div>`).join('');
+  showS('screen-results');
+}
+function quitGame(){
+  clearInterval(tint);
+  // Remove session — player left mid-game, don't keep them on leaderboard
+  if(sessionRef){sessionRef.remove();sessionRef=null;}
+  // Remove any in-progress scores for this player from Firebase
+  if(useFB&&db&&pname){
+    // Remove active player marker
+    db.ref('activePlayers').orderByChild('name').equalTo(pname).once('value',s=>{
+      s.forEach(c=>c.ref.remove());
+    });
+  }
+  showS('screen-welcome');
+}
+function playAgain(){showS('screen-welcome');}
+
+// ══════════════════════════════════════════════
+// SCORES
+// ══════════════════════════════════════════════
+async function saveScore(){
+  if(useFB&&db){
+    const k='scores/'+game+'/'+pname.replace(/[.#$/[\]]/g,'_')+'_'+Date.now();
+    await db.ref(k).set({name:pname,score,game,ts:Date.now()});
+  } else {
+    let a=getLoc();a.push({name:pname,score,game,ts:Date.now()});
+    localStorage.setItem('bqa3',JSON.stringify(a));
+  }
+}
+async function getMyRank(){
+  const bm={};
+  if(useFB&&db){
+    const s=await db.ref('scores').once('value');
+    s.forEach(gs=>gs.forEach(c=>{const d=c.val();if(!bm[d.name]||d.score>bm[d.name])bm[d.name]=d.score;}));
+  } else {getLoc().forEach(r=>{if(!bm[r.name]||r.score>bm[r.name])bm[r.name]=r.score;});}
+  const sorted=Object.values(bm).sort((a,b)=>b-a);
+  const my=bm[pname]||0;return sorted.indexOf(my)+1;
+}
+function getLoc(){try{return JSON.parse(localStorage.getItem('bqa3')||'[]');}catch{return[];}}
+function getBest(arr){const m={};arr.forEach(r=>{if(!m[r.name]||r.score>m[r.name].score)m[r.name]={name:r.name,score:r.score,game:r.game};});return Object.values(m);}
+
+// ══════════════════════════════════════════════
+// LEADERBOARD
+// ══════════════════════════════════════════════
+function setLbt(el){document.querySelectorAll('.lbtab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+async function renderLb(tab){
+  curTab=tab;
+  const list=document.getElementById('lblist');list.innerHTML='<div class="lbem">Loading...</div>';
+  let players=[];
+  if(useFB&&db){
+    // Get currently active (mid-game) players to exclude from leaderboard
+    const activeSnap=await db.ref('activePlayers').once('value');
+    const activePlayers=new Set();
+    activeSnap.forEach(c=>{const d=c.val();if(d.name)activePlayers.add(d.name);});
+    const s=await db.ref('scores').once('value');const raw=[];
+    s.forEach(gs=>gs.forEach(c=>{const d=c.val();if(!activePlayers.has(d.name))raw.push({name:d.name,score:d.score,game:d.game||gs.key});}));
+    const f=tab==='all'?raw:raw.filter(r=>r.game===tab);
+    players=getBest(f).sort((a,b)=>b.score-a.score).slice(0,10);
+  } else {
+    const raw=tab==='all'?getLoc():getLoc().filter(r=>r.game===tab);
+    players=getBest(raw).sort((a,b)=>b.score-a.score).slice(0,10);
+  }
+  if(!players.length){list.innerHTML='<div class="lbem">No scores yet.<br>Be the first! 🎬</div>';return;}
+  const medals=['🥇','🥈','🥉'];
+  const gl={movie:'🎬',emoji:'🤩',dialogue:'💬'};
+  list.innerHTML=players.map((p,i)=>{
+    const isy=p.name===pname;
+    const c=AVC[i%AVC.length];
+    const ini=p.name.slice(0,2).toUpperCase();
+    return `<div class="lbrow${isy?' you':''}">
+      <div class="lbrk${i<3?'':' t'}">${medals[i]||i+1}</div>
+      <div class="lbav" style="background:${c}20;color:${c}">${ini}</div>
+      <div class="lbn">${p.name}${isy?'<span class="lbyt">YOU</span>':''}${tab==='all'?'<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.06);color:var(--muted);margin-left:5px">'+(gl[p.game]||'')+'</span>':''}</div>
+      <div class="lbp">${p.score.toLocaleString()}</div>
+    </div>${i<players.length-1?'<div class="lbdv"></div>':''}`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+document.addEventListener('DOMContentLoaded',()=>{
+  const ni=document.getElementById('pname');
+  if(ni)ni.addEventListener('keydown',e=>{if(e.key==='Enter')startGame();});
+});
+</script>
+</body>
+</html>
